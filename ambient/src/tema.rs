@@ -2,7 +2,7 @@
 //! Catppuccin (rosewater … crust) que se lleva al escritorio: el tema de
 //! COSMIC (ventanas, panel, la terminal y las apps GTK) y, si se activan en
 //! `~/.config/cosmic-ambient/integraciones.toml`, el prompt de starship, el
-//! resaltado de zsh y fzf, bat, btop, VS Code y Neovim.
+//! resaltado de zsh y fzf, bat, btop y VS Code.
 //!
 //! Las plantillas (`templates/`) son las de Catppuccin Mocha: cada color suyo
 //! se cambia por el de la misma posición en la paleta del fondo.
@@ -49,12 +49,11 @@ pub struct Integraciones {
     pub bat: bool,
     pub btop: bool,
     pub vscode: bool,
-    pub neovim: bool,
 }
 
 impl Default for Integraciones {
     fn default() -> Self {
-        Integraciones { cosmic: true, zsh: false, starship: false, bat: false, btop: false, vscode: false, neovim: false }
+        Integraciones { cosmic: true, zsh: false, starship: false, bat: false, btop: false, vscode: false }
     }
 }
 
@@ -172,14 +171,13 @@ pub fn aplicar(tema: &Tema, nombre: &str, forzar: bool) -> Vec<String> {
         return Vec::new();
     }
     let mut avisos = Vec::new();
-    let pasos: [(bool, &str, fn(&Tema, &str) -> io::Result<()>); 7] = [
+    let pasos: [(bool, &str, fn(&Tema, &str) -> io::Result<()>); 6] = [
         (int.cosmic, "tema de COSMIC", cosmic),
         (int.zsh, "zsh y fzf", zsh),
         (int.starship, "starship", starship),
         (int.bat, "bat", bat),
         (int.btop, "btop", btop),
         (int.vscode, "VS Code", vscode),
-        (int.neovim, "Neovim", neovim),
     ];
     for (que, paso) in pasos.into_iter().filter(|p| p.0).map(|p| (p.1, p.2)) {
         if let Err(e) = paso(tema, nombre) {
@@ -340,13 +338,3 @@ fn vscode(t: &Tema, _: &str) -> io::Result<()> {
     escribir(&ruta, &String::from_utf8_lossy(&out))
 }
 
-/// `~/.local/state/cosmic-ambient/palette.lua`: la lee Catppuccin en Neovim
-/// (ver `extras/nvim/ambient.lua`), que vigila el archivo y se recolorea solo.
-fn neovim(t: &Tema, _: &str) -> io::Result<()> {
-    let mut lua = String::from("-- Generado por cosmic-ambient: paleta del fondo puesto.\nreturn {\n");
-    for n in COLORES {
-        lua.push_str(&format!("  {n} = \"{}\",\n", t.color(n)));
-    }
-    lua.push_str("}\n");
-    escribir(&home().join(".local/state/cosmic-ambient/palette.lua"), &lua)
-}

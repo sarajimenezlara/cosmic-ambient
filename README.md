@@ -14,8 +14,8 @@ wallpapers switches all of it.*
 - **Estética del sistema**: una paleta de 26 colores por fondo (con los nombres
   de [Catppuccin](https://catppuccin.com)) que tiñe el tema de COSMIC: panel,
   dock, ventanas, color de acento, la terminal de COSMIC y las apps GTK.
-  Opcionalmente también zsh, fzf, [starship](https://starship.rs), bat, btop,
-  VS Code y Neovim, que cambian en caliente.
+  Opcionalmente también zsh, fzf, [starship](https://starship.rs), bat, btop
+  y VS Code, que cambian en caliente.
 - **Reloj de escritorio** (`ambient-clock`): hora y fecha con la tipografía que
   quieras, relleno, borde y sombra, o sobre una tarjeta de color redondeada.
   Si tienes instalado el Moonlight Clock, también se puede usar ese.
@@ -114,7 +114,6 @@ activa en `~/.config/cosmic-ambient/integraciones.toml` (se crea solo):
 | `bat` | Tema «Ambient» | — |
 | `btop` | Tema «ambient» | — |
 | `vscode` | Cambia los colores del tema Catppuccin Mocha | Extensión Catppuccin instalada |
-| `neovim` | Escribe la paleta para Catppuccin, que se recolorea en caliente | Copia [`extras/nvim/ambient.lua`](extras/nvim/ambient.lua) a `lua/plugins/` (lazy.nvim) |
 
 ## Estructura
 
@@ -123,7 +122,7 @@ activa en `~/.config/cosmic-ambient/integraciones.toml` (se crea solo):
 | `ambient/` | La app y la línea de comandos (Rust + [libcosmic](https://github.com/pop-os/libcosmic)) |
 | `ambient-visualizer/` | El visualizador (Wayland layer-shell, FFT del audio que suena) |
 | `ambient-clock/` | El reloj de texto (Wayland layer-shell) |
-| `extras/` | Fragmentos para zsh y Neovim |
+| `extras/` | Fragmento para el `.zshrc` |
 
 ## Licencia
 

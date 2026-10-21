@@ -289,7 +289,7 @@ impl App {
             }
             tema = tema.add(widget::text::caption(
                 "Tiñe el tema de COSMIC (y con él la terminal y las apps GTK). zsh, starship, \
-                 bat, btop, VS Code y Neovim se activan en ~/.config/cosmic-ambient/integraciones.toml. \
+                 bat, btop y VS Code se activan en ~/.config/cosmic-ambient/integraciones.toml. \
                  La paleta completa (26 colores) está en perfil.toml.",
             ));
         }
