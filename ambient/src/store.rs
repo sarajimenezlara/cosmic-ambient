@@ -256,7 +256,8 @@ pub fn activo() -> Option<String> {
 }
 
 /// Copia una imagen al almacén. El perfil nuevo parte de la configuración que
-/// hay puesta ahora mismo (visualizador, reloj y modo oscuro).
+/// hay puesta ahora mismo (visualizador, reloj y modo oscuro), con una paleta
+/// sacada de la imagen.
 pub fn anadir(imagen: &Path, nombre: &str) -> io::Result<Fondo> {
     let id = id_de(nombre);
     if id.is_empty() {
@@ -274,11 +275,14 @@ pub fn anadir(imagen: &Path, nombre: &str) -> io::Result<Fondo> {
     fs::copy(imagen, dir.join(&archivo))?;
     miniatura(&img).save(dir.join("miniatura.png")).map_err(io::Error::other)?;
 
-    let fondo = Fondo {
+    let mut fondo = Fondo {
         id,
         dir,
         perfil: Perfil { nombre: nombre.to_string(), imagen: archivo, ..perfil_actual() },
     };
+    if let Some(colores) = crate::paleta::desde_imagen(&fondo.miniatura(), 0) {
+        fondo.perfil.tema.colores = colores;
+    }
     fondo.guardar()?;
     Ok(fondo)
 }
@@ -299,6 +303,27 @@ pub fn cambiar_imagen(fondo: &mut Fondo, imagen: &Path) -> io::Result<()> {
     fondo.guardar()?;
     let _ = fs::remove_file(viejo);
     Ok(())
+}
+
+/// Un nombre que no esté cogido: "Atardecer", "Atardecer 2", "Atardecer 3"…
+pub fn nombre_libre(base: &str) -> String {
+    let base = base.trim();
+    let base = if id_de(base).is_empty() { "Fondo" } else { base };
+    (1..)
+        .map(|n| if n == 1 { base.to_string() } else { format!("{base} {n}") })
+        .find(|n| !raiz().join(id_de(n)).exists())
+        .unwrap()
+}
+
+/// Nombre a partir del archivo: "atardecer_rojo-4k.png" → "Atardecer rojo 4k".
+pub fn nombre_de_archivo(imagen: &Path) -> String {
+    let base = imagen.file_stem().map(|s| s.to_string_lossy().replace(['_', '-'], " ")).unwrap_or_default();
+    let base = base.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut letras = base.chars();
+    match letras.next() {
+        Some(c) => c.to_uppercase().chain(letras).collect(),
+        None => String::new(),
+    }
 }
 
 pub fn quitar(fondo: &Fondo) -> io::Result<()> {

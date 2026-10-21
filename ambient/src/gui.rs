@@ -3,9 +3,11 @@
 //! fondo es el que está puesto, se aplican también al momento.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 use cosmic::app::{Settings, Task};
+use cosmic::dialog::file_chooser::{self, FileFilter};
 use cosmic::iced::widget::container;
 use cosmic::iced::{Alignment, Background, Border, Color, Length, Size, Subscription};
 use cosmic::prelude::*;
@@ -44,6 +46,17 @@ pub enum Message {
     Seleccionar(usize),
     Aplicar,
     Recargar,
+    /// Abre el selector para añadir un fondo nuevo.
+    Anadir,
+    /// Abre el selector para cambiar la imagen del elegido.
+    CambiarImagen,
+    /// La imagen elegida en el selector (para añadir o para cambiar).
+    Elegida(Eleccion, PathBuf),
+    /// Algo que mostrar en la barra de estado (p. ej. un error del selector).
+    Estado(String),
+    /// La primera vez pide confirmación; la segunda lo quita.
+    Quitar,
+    Nombre(String),
     ModoOscuro(bool),
     VisMostrar(bool),
     VisEsquina(usize),
@@ -65,6 +78,14 @@ pub enum Message {
     TemaAplicar(bool),
     /// Uno de `tema::PRINCIPALES`.
     TemaColor(usize, String),
+    /// Paleta sacada de la imagen; cada vez que se pulsa, otra propuesta.
+    TemaDesdeImagen,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Eleccion {
+    Anadir,
+    CambiarImagen,
 }
 
 pub struct App {
@@ -77,6 +98,10 @@ pub struct App {
     sel: usize,
     activo: Option<String>,
     estado: String,
+    /// Se ha pulsado «Quitar» una vez en el fondo elegido.
+    confirmar_quitar: bool,
+    /// Propuesta de paleta que toca la próxima vez (vuelve a 0 al cambiar de fondo).
+    propuesta: usize,
 }
 
 impl App {
@@ -136,6 +161,58 @@ impl App {
         }
     }
 
+    fn elegida(&mut self, eleccion: Eleccion, imagen: PathBuf) {
+        match eleccion {
+            Eleccion::Anadir => {
+                let nombre = store::nombre_libre(&store::nombre_de_archivo(&imagen));
+                match store::anadir(&imagen, &nombre) {
+                    Ok(f) => {
+                        self.estado = format!("Añadido «{}», con colores sacados de la imagen.", f.perfil.nombre);
+                        self.firma = firma();
+                        self.fondos = store::listar();
+                        self.sel = self.fondos.iter().position(|x| x.id == f.id).unwrap_or(0);
+                        self.recargar();
+                    }
+                    Err(e) => self.estado = format!("No se pudo añadir: {e}"),
+                }
+            }
+            Eleccion::CambiarImagen => {
+                let Some(fondo) = self.fondos.get_mut(self.sel) else { return };
+                if let Err(e) = store::cambiar_imagen(fondo, &imagen) {
+                    self.estado = format!("No se pudo cambiar la imagen: {e}");
+                    return;
+                }
+                self.firma = firma();
+                self.recargar();
+                if self.es_activo(&self.fondos[self.sel]) {
+                    self.aplicar_sel();
+                } else {
+                    self.estado = "Imagen cambiada.".into();
+                }
+            }
+        }
+    }
+
+    fn quitar(&mut self) {
+        if !self.confirmar_quitar {
+            self.confirmar_quitar = true;
+            return;
+        }
+        self.confirmar_quitar = false;
+        let Some(fondo) = self.fondos.get(self.sel) else { return };
+        let nombre = fondo.perfil.nombre.clone();
+        match store::quitar(fondo) {
+            Ok(()) => {
+                self.estado = format!("Quitado «{nombre}».");
+                self.firma = firma();
+                self.fondos.remove(self.sel);
+                self.sel = self.sel.min(self.fondos.len().saturating_sub(1));
+                self.recargar();
+            }
+            Err(e) => self.estado = format!("No se pudo quitar: {e}"),
+        }
+    }
+
     fn galeria(&self) -> Element<'_, Message> {
         let tarjetas: Vec<Element<'_, Message>> = self
             .fondos
@@ -178,7 +255,11 @@ impl App {
         while tarjetas.peek().is_some() {
             filas = filas.push(widget::row::with_children(tarjetas.by_ref().take(2).collect::<Vec<_>>()).spacing(12));
         }
-        widget::scrollable(filas).width(Length::Fill).height(Length::Fill).into()
+        widget::column::with_capacity(2)
+            .push(widget::button::standard("Añadir fondo…").leading_icon(icono("list-add-symbolic")).on_press(Message::Anadir))
+            .push(widget::scrollable(filas).width(Length::Fill).height(Length::Fill))
+            .spacing(12)
+            .into()
     }
 
     fn panel(&self) -> Element<'_, Message> {
@@ -191,8 +272,24 @@ impl App {
             widget::button::suggested("Poner este fondo").on_press(Message::Aplicar).into()
         };
 
+        let quitar: Element<'_, Message> = if self.confirmar_quitar {
+            widget::button::destructive("¿Seguro? Pulsa otra vez").on_press(Message::Quitar).into()
+        } else {
+            widget::button::text("Quitar").on_press(Message::Quitar).into()
+        };
+        let botones = widget::row::with_capacity(3)
+            .push(boton)
+            .push(widget::button::standard("Cambiar imagen…").on_press(Message::CambiarImagen))
+            .push(quitar)
+            .spacing(8)
+            .align_y(Alignment::Center);
+
         let escritorio = settings::section()
             .title("Escritorio")
+            .add(settings::item(
+                "Nombre",
+                widget::text_input("Nombre del fondo", p.nombre.as_str()).on_input(Message::Nombre).width(200),
+            ))
             .add(settings::item("Modo oscuro", widget::toggler(p.modo_oscuro).on_toggle(Message::ModoOscuro)));
 
         let v = &p.visualizador;
@@ -268,8 +365,8 @@ impl App {
         }
 
         let mut col = widget::column::with_capacity(4)
-            .push(widget::text::title3(p.nombre.as_str()))
-            .push(boton)
+            .push(widget::text::title3(if p.nombre.is_empty() { f.id.as_str() } else { p.nombre.as_str() }))
+            .push(botones)
             .spacing(16);
         if !self.estado.is_empty() {
             col = col.push(widget::text::caption(self.estado.as_str()));
@@ -280,6 +377,11 @@ impl App {
             widget::toggler(t.aplicar).on_toggle(Message::TemaAplicar),
         ));
         if t.aplicar {
+            let texto = if self.propuesta == 0 { "Sacar colores del fondo" } else { "Otra propuesta" };
+            tema = tema.add(settings::item(
+                "Paleta automática",
+                widget::button::standard(texto).on_press(Message::TemaDesdeImagen),
+            ));
             for (i, n) in crate::tema::PRINCIPALES.iter().enumerate() {
                 let valor = t.colores.get(*n).map_or("", String::as_str);
                 tema = tema.add(settings::item(
@@ -296,6 +398,31 @@ impl App {
 
         col.push(escritorio).push(tema).push(vis).push(reloj).into()
     }
+}
+
+fn icono(nombre: &'static str) -> widget::icon::Handle {
+    widget::icon::from_name(nombre).size(16).handle()
+}
+
+/// Abre el selector de imágenes del sistema.
+fn elegir_imagen(eleccion: Eleccion) -> Task<Message> {
+    cosmic::task::future(async move {
+        let titulo = match eleccion {
+            Eleccion::Anadir => "Elige la imagen del fondo nuevo",
+            Eleccion::CambiarImagen => "Elige la imagen nueva",
+        };
+        let dialogo = file_chooser::open::Dialog::new()
+            .title(titulo)
+            .filter(FileFilter::new("Imágenes").mimetype("image/png").mimetype("image/jpeg").mimetype("image/webp"));
+        match dialogo.open_file().await {
+            Ok(r) => match r.url().to_file_path() {
+                Ok(ruta) => Message::Elegida(eleccion, ruta),
+                Err(()) => Message::Estado("Esa imagen no es un archivo local.".into()),
+            },
+            Err(file_chooser::Error::Cancelled) => Message::Estado(String::new()),
+            Err(e) => Message::Estado(format!("No se pudo abrir el selector: {e}")),
+        }
+    })
 }
 
 fn fecha(path: &std::path::Path) -> Option<SystemTime> {
@@ -358,6 +485,8 @@ impl cosmic::Application for App {
             sel: 0,
             activo: None,
             estado: String::new(),
+            confirmar_quitar: false,
+            propuesta: 0,
         };
         app.recargar();
         app.set_header_title("Ambient".into());
@@ -377,8 +506,16 @@ impl cosmic::Application for App {
             Message::Seleccionar(i) => {
                 self.sel = i;
                 self.estado.clear();
+                self.confirmar_quitar = false;
+                self.propuesta = 0;
             }
             Message::Aplicar => self.aplicar_sel(),
+            Message::Anadir => return elegir_imagen(Eleccion::Anadir),
+            Message::CambiarImagen => return elegir_imagen(Eleccion::CambiarImagen),
+            Message::Elegida(eleccion, imagen) => self.elegida(eleccion, imagen),
+            Message::Estado(s) => self.estado = s,
+            Message::Quitar => self.quitar(),
+            Message::Nombre(s) => self.editar(|p| p.nombre = s),
             Message::Recargar => {
                 let firma = firma();
                 if firma != self.firma || store::activo() != self.activo {
@@ -413,6 +550,16 @@ impl cosmic::Application for App {
             Message::TemaColor(i, s) => self.editar(|p| {
                 p.tema.colores.insert(crate::tema::PRINCIPALES[i].into(), s);
             }),
+            Message::TemaDesdeImagen => {
+                let Some(fondo) = self.fondos.get(self.sel) else { return Task::none() };
+                match crate::paleta::desde_imagen(&fondo.miniatura(), self.propuesta) {
+                    Some(colores) => {
+                        self.propuesta += 1;
+                        self.editar(|p| p.tema.colores = colores);
+                    }
+                    None => self.estado = "No se pudo leer la imagen.".into(),
+                }
+            }
             Message::RelojColor(i, s) => {
                 self.editar(|p| {
                     p.reloj.colores.insert(store::COLORES_RELOJ[i].into(), s);
@@ -427,9 +574,8 @@ impl cosmic::Application for App {
             return widget::container(
                 widget::column::with_capacity(4)
                     .push(widget::text::title3("El almacén está vacío"))
-                    .push(widget::text::body(
-                        "Añade uno desde la terminal:\ncosmic-ambient añadir <imagen> <nombre>",
-                    ))
+                    .push(widget::text::body("Elige una imagen para empezar."))
+                    .push(widget::button::suggested("Añadir fondo…").on_press(Message::Anadir))
                     .spacing(12)
                     .align_x(Alignment::Center),
             )

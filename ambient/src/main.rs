@@ -12,6 +12,7 @@
 //! (también en inglés: add, list, apply, remove, profile, set-image)
 
 mod gui;
+mod paleta;
 mod store;
 mod tema;
 

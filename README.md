@@ -10,12 +10,16 @@ wallpapers switches all of it.*
 
 ## Qué hace
 
-- **Galería de fondos**, cada uno con su perfil (`perfil.toml`).
+- **Galería de fondos**, cada uno con su perfil (`perfil.toml`). Se añaden,
+  renombran, cambian de imagen y quitan desde la propia ventana.
 - **Estética del sistema**: una paleta de 26 colores por fondo (con los nombres
   de [Catppuccin](https://catppuccin.com)) que tiñe el tema de COSMIC: panel,
   dock, ventanas, color de acento, la terminal de COSMIC y las apps GTK.
   Opcionalmente también zsh, fzf, [starship](https://starship.rs), bat, btop
   y VS Code, que cambian en caliente.
+- **Paleta automática**: los colores salen de los tonos que más destacan en la
+  imagen. Si no te convence, «Otra propuesta» prueba con otro acento u otro
+  tinte para los fondos.
 - **Reloj de escritorio** (`ambient-clock`): hora y fecha con la tipografía que
   quieras, relleno, borde y sombra, o sobre una tarjeta de color redondeada.
   Si tienes instalado el Moonlight Clock, también se puede usar ese.
@@ -50,7 +54,7 @@ en el inicio de sesión. Para quitarlo: `./install.sh --uninstall`.
 
 ## Uso
 
-Abre **Ambient** desde el lanzador, o usa la terminal:
+Abre **Ambient** desde el lanzador y pulsa «Añadir fondo…», o usa la terminal:
 
 ```sh
 cosmic-ambient añadir ~/Imágenes/fondo.png "Mi fondo"   # meterlo en el almacén
@@ -61,8 +65,9 @@ cosmic-ambient cambiar-imagen "Mi fondo" otra.png
 cosmic-ambient quitar "Mi fondo"
 ```
 
-Un fondo nuevo empieza con la configuración del que está puesto. Los cambios
-que hagas en la ventana se guardan y, si es el fondo puesto, se ven al momento.
+Un fondo nuevo empieza con la configuración del que está puesto y con una
+paleta sacada de su imagen. Los cambios que hagas en la ventana se guardan y,
+si es el fondo puesto, se ven al momento.
 
 ### El perfil
 

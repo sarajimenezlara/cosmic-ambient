@@ -16,6 +16,8 @@ serde_json = { version = "1", features = ["preserve_order"] }
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"
 rev = "c3ced76094376bcbe331da0d4518fcc6b27006bb"
+# El selector de archivos del sistema, para elegir imágenes.
+features = ["xdg-portal"]
 
 # Para escribir el CSS de GTK del tema (libcosmic ya lo trae, sin esta parte).
 [dependencies.cosmic-theme]
