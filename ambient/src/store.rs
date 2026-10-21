@@ -315,15 +315,43 @@ pub fn nombre_libre(base: &str) -> String {
         .unwrap()
 }
 
-/// Nombre a partir del archivo: "atardecer_rojo-4k.png" → "Atardecer rojo 4k".
+/// Palabras de relleno típicas de las imágenes descargadas.
+const RELLENO: [&str; 22] = [
+    "wp", "wallpaper", "wallpapers", "fondo", "fondos", "background", "backgrounds", "bg", "desktop",
+    "hd", "fhd", "qhd", "uhd", "4k", "5k", "8k", "2k", "hq", "img", "image", "imagen", "pc",
+];
+
+/// Nombre a partir del archivo, sin números ni relleno:
+/// "wp4640784-jojos-golden-wind-wallpapers.png" → "Jojos golden wind".
 pub fn nombre_de_archivo(imagen: &Path) -> String {
-    let base = imagen.file_stem().map(|s| s.to_string_lossy().replace(['_', '-'], " ")).unwrap_or_default();
-    let base = base.split_whitespace().collect::<Vec<_>>().join(" ");
-    let mut letras = base.chars();
+    let base = imagen.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let mut palabras: Vec<&str> = Vec::new();
+    for p in base.split(|c: char| c.is_whitespace() || matches!(c, '_' | '-' | '.' | '(' | ')' | '[' | ']' | '+')) {
+        // Un número corto detrás de una palabra es parte del nombre ("Persona 5").
+        let numero_corto = p.len() <= 2 && p.chars().all(|c| c.is_ascii_digit());
+        if !p.is_empty() && (!es_relleno(p) || numero_corto && !palabras.is_empty()) {
+            palabras.push(p);
+        }
+    }
+    let nombre = palabras.join(" ");
+    let mut letras = nombre.chars();
     match letras.next() {
         Some(c) => c.to_uppercase().chain(letras).collect(),
-        None => String::new(),
+        None => "Fondo".into(),
     }
+}
+
+/// Números, resoluciones ("1920x1080", "1080p"), códigos con muchas cifras
+/// ("wp4640784", "img_0042") y palabras de `RELLENO`.
+fn es_relleno(palabra: &str) -> bool {
+    let p = palabra.to_lowercase();
+    let cifras = p.chars().filter(char::is_ascii_digit).count();
+    RELLENO.contains(&p.as_str())
+        || cifras * 2 >= p.chars().count()
+        || cifras >= 4
+        || p.split_once('x').is_some_and(|(a, b)| {
+            !a.is_empty() && !b.is_empty() && a.chars().chain(b.chars()).all(|c| c.is_ascii_digit())
+        })
 }
 
 pub fn quitar(fondo: &Fondo) -> io::Result<()> {
@@ -547,4 +575,21 @@ fn configurar_moonlight(r: &Reloj, mostrar: bool) -> io::Result<()> {
 pub fn es_hex(s: &str) -> bool {
     let s = s.trim();
     s.len() == 7 && s.starts_with('#') && s[1..].chars().all(|c| c.is_ascii_hexdigit())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nombres_automaticos() {
+        let n = |archivo: &str| nombre_de_archivo(Path::new(archivo));
+        assert_eq!(n("/x/wp4640784-jojos-bizarre-adventure-golden-wind-wallpapers.png"), "Jojos bizarre adventure golden wind");
+        assert_eq!(n("atardecer_rojo-4k.png"), "Atardecer rojo");
+        assert_eq!(n("Kakegurui Yumeko 1920x1080 HD wallpaper.jpg"), "Kakegurui Yumeko");
+        assert_eq!(n("IMG_20240512_183022.jpg"), "Fondo");
+        assert_eq!(n("1234567.png"), "Fondo");
+        assert_eq!(n("Persona 5 (2560x1440).webp"), "Persona 5");
+        assert_eq!(n("montaña-nevada-1080p.jpg"), "Montaña nevada");
+    }
 }
