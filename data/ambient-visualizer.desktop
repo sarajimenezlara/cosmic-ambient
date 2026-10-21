@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Ambient Visualizer
+Comment=Visualizador de audio y canción actual en el escritorio
+Exec=ambient-visualizer
+Terminal=false
+NoDisplay=true
+OnlyShowIn=COSMIC;
+X-GNOME-Autostart-enabled=true

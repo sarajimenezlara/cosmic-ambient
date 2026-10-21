@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Ambient
+Comment=Fondos de escritorio con su propio ambiente: colores, reloj y visualizador
+Exec=cosmic-ambient
+Icon=preferences-desktop-wallpaper
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=wallpaper;fondo;theme;tema;clock;reloj;music;
+StartupWMClass=io.github.sarajimenezlara.Ambient

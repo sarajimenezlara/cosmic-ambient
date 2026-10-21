@@ -1,0 +1,15 @@
+[package]
+name = "ambient-clock"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/sarajimenezlara/cosmic-ambient"
+description = "Reloj de solo texto (con borde y sombra) para el escritorio de COSMIC"
+
+[dependencies]
+smithay-client-toolkit = "0.20"
+ab_glyph = "0.2"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+serde = { version = "1", features = ["derive"] }
+toml = { version = "0.9", default-features = false, features = ["parse", "serde"] }
+

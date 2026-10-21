@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Ambient Clock
+Comment=Reloj de texto en el escritorio
+Exec=ambient-clock
+Terminal=false
+NoDisplay=true
+OnlyShowIn=COSMIC;
+X-GNOME-Autostart-enabled=true

@@ -1,0 +1,25 @@
+[package]
+name = "cosmic-ambient"
+version = "0.1.0"
+edition = "2024"
+description = "Fondos de escritorio para COSMIC, cada uno con su ambiente: colores del sistema, reloj y visualizador"
+license = "MIT"
+repository = "https://github.com/sarajimenezlara/cosmic-ambient"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"
+toml_edit = "0.25"
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic"
+rev = "c3ced76094376bcbe331da0d4518fcc6b27006bb"
+
+# Para escribir el CSS de GTK del tema (libcosmic ya lo trae, sin esta parte).
+[dependencies.cosmic-theme]
+git = "https://github.com/pop-os/libcosmic"
+rev = "c3ced76094376bcbe331da0d4518fcc6b27006bb"
+features = ["export"]
+
