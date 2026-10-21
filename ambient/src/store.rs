@@ -560,6 +560,9 @@ fn configurar_moonlight(r: &Reloj, mostrar: bool) -> io::Result<()> {
     }
     fs::write(&path, doc.to_string())?;
 
+    if let Err(e) = moonlight_al_inicio(mostrar) {
+        eprintln!("arranque del Moonlight Clock: {e}");
+    }
     if mostrar != reloj_en_marcha() {
         // Sin tuberías: el reloj sigue vivo en segundo plano y output() esperaría.
         Command::new(reloj_bin())
@@ -569,6 +572,20 @@ fn configurar_moonlight(r: &Reloj, mostrar: bool) -> io::Result<()> {
             .status()?;
     }
     Ok(())
+}
+
+/// El Moonlight Clock se arranca solo al iniciar sesión; si el fondo puesto
+/// no lo usa, se desactiva ese arranque (`Hidden=true`) para que no aparezca
+/// encima del otro reloj al encender el ordenador.
+fn moonlight_al_inicio(activar: bool) -> io::Result<()> {
+    let path = home().join(".config/autostart/io.github.moonlight-clock.desktop");
+    let Ok(text) = fs::read_to_string(&path) else { return Ok(()) };
+    let mut lineas: Vec<&str> = text.lines().filter(|l| !l.starts_with("Hidden=")).collect();
+    if !activar {
+        lineas.push("Hidden=true");
+    }
+    let nuevo = lineas.join("\n") + "\n";
+    if nuevo != text { fs::write(&path, nuevo) } else { Ok(()) }
 }
 
 /// "#rrggbb" válido.
